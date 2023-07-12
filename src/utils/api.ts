@@ -5,6 +5,7 @@ import { PublisherKey, UptimeInfo } from "@/type";
 
 export const pythApi = Axios.create({
   baseURL: "https://web-api.pyth.network",
+  timeout: 1000 * 10,
 });
 pythApi.interceptors.response.use((response) => response.data);
 

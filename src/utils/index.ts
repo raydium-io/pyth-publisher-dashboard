@@ -9,6 +9,8 @@ import _ from "lodash";
 
 import { PriceInfo, ProductInfo, ProductKey, ProductPriceInfo, PublisherKey } from "@/type";
 
+import { logger } from "./logger";
+
 export const usePrevious = <T>(state: T): T | undefined => {
   const ref = useRef<T>();
 
@@ -17,6 +19,63 @@ export const usePrevious = <T>(state: T): T | undefined => {
   }, [state]);
 
   return ref.current;
+};
+
+export const useInterval = (callback: any, delay?: number | null) => {
+  const savedCallback = useRef<any>(() => {});
+
+  useEffect(() => {
+    savedCallback.current = callback;
+  });
+
+  useEffect(() => {
+    if (delay !== null) {
+      const interval = setInterval(() => savedCallback.current(), delay || 0);
+      return () => clearInterval(interval);
+    }
+
+    return undefined;
+  }, [delay]);
+};
+
+export const sleep = async (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+export const calcInterval = (cronMinutes = 10) => {
+  const seconds = 60 * cronMinutes;
+
+  const interval = seconds - (parseInt(String(new Date().getTime() / 1000)) % seconds);
+
+  return interval * 1000;
+};
+
+export const endlessRetry = async <T>(
+  name: string,
+  call: () => Promise<T>,
+  config?: { sleepSeconds: number; maxRetry: number },
+): Promise<T> => {
+  const { sleepSeconds = 5, maxRetry = 3 } = config || {};
+
+  let count = 0;
+
+  let result: T | undefined;
+  let error;
+
+  while (result === undefined && count <= maxRetry) {
+    try {
+      result = await call();
+    } catch (err) {
+      logger.debug("endlessRetry", `${name} failed: ${String(err)}, retrying...`);
+      await sleep(1000 * sleepSeconds);
+    }
+
+    count++;
+  }
+
+  if (result) return result;
+
+  throw error;
 };
 
 type PublicKeyish = PublicKey | string;

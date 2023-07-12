@@ -17,6 +17,7 @@ import {
   getProductAndPublisherKey, getPythProductAccountPubkeys, isPublicKey,
 } from "@/utils";
 import WorkFlow from "@/utils/flow";
+import { logger } from "@/utils/logger";
 
 type State = {
   clusters: PythCluster[];
@@ -285,7 +286,7 @@ export const useStore = create<State>()(
 
         const setInitializationDescription = (description: string) => {
           // debug output
-          console.log(cluster, description);
+          logger.debug("initializing", `<${cluster}>`, description);
           return get().setInitializationDescription(cluster, description);
         };
         const setInitializationError = (description: string, title?: string) =>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CloseCircleFilled, ExclamationCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { PythCluster } from "@pythnetwork/client";
 import { Button, Checkbox, Col, Result, Row, Space, Spin, Table, Typography } from "antd";
@@ -14,8 +14,11 @@ import { Center, DynamicNumber, Text, Tooltip } from "@/components/ui";
 import { StatusTexts } from "@/constant";
 import { useStore } from "@/store";
 import { ClusterStatus, PublishDetail, UptimeInfo } from "@/type";
-import { getProductAndPublisherKey, getQuoteSymbol, PYTH_LINK, shortAddress } from "@/utils";
+import {
+  calcInterval, endlessRetry, getProductAndPublisherKey, getQuoteSymbol, PYTH_LINK, shortAddress, useInterval,
+} from "@/utils";
 import { fetchUptime } from "@/utils/api";
+import { logger } from "@/utils/logger";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
@@ -117,18 +120,35 @@ export const PublisherUptime = ({ cluster, publishDetail }: { cluster: PythClust
   }, [cluster, uptimeMap]);
   const setUptime = useStore((state) => state.setUptime);
 
+  const [delay, setDelay] = useState<number | null>(null);
+
   useEffect(() => {
     if (!getUptime().length) fetch();
+    else setDelay(calcInterval());
   }, []);
 
-  const fetch = async () => {
-    const uptime = await fetchUptime({
-      symbol: publishDetail.symbol,
-      cluster: cluster,
-      publisher: publishDetail.publisherAccount,
-    });
+  useInterval(() => fetch(), delay);
 
-    setUptime(cluster, getProductAndPublisherKey(publishDetail.productAccount, publishDetail.publisherAccount), uptime);
+  const fetch = async () => {
+    logger.debug("Uptime", `Fetching ${publishDetail.publisherAccount} uptime for ${publishDetail.symbol}`);
+
+    setDelay(calcInterval());
+
+    await endlessRetry(`Fetch ${publishDetail.publisherAccount} uptime for ${publishDetail.symbol}`, () =>
+      fetchUptime({
+        symbol: publishDetail.symbol,
+        cluster: cluster,
+        publisher: publishDetail.publisherAccount,
+      }),
+    )
+      .then((uptime) =>
+        setUptime(
+          cluster,
+          getProductAndPublisherKey(publishDetail.productAccount, publishDetail.publisherAccount),
+          uptime,
+        ),
+      )
+      .catch(() => {});
   };
 
   if (!getUptime().length)
