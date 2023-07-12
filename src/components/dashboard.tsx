@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { CloseCircleFilled, ExclamationCircleOutlined, LoadingOutlined } from "@ant-design/icons";
 import { PythCluster } from "@pythnetwork/client";
-import { Button, Checkbox, Col, Result, Row, Space, Spin, Table, Tag } from "antd";
+import { Button, Checkbox, Col, Result, Row, Space, Spin, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table/interface";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -14,7 +14,7 @@ import { Center, DynamicNumber, Text, Tooltip } from "@/components/ui";
 import { StatusTexts } from "@/constant";
 import { useStore } from "@/store";
 import { ClusterStatus, PublishDetail, UptimeInfo } from "@/type";
-import { shortAddress } from "@/utils";
+import { getQuoteSymbol, PYTH_LINK, shortAddress } from "@/utils";
 import { fetchUptime } from "@/utils/api";
 
 dayjs.extend(relativeTime);
@@ -27,6 +27,8 @@ dayjs.updateLocale("en", {
     ss: "%ds",
   },
 });
+
+const { Link } = Typography;
 
 export const DashboardCheckbox = ({ cluster }: { cluster: PythCluster }) => {
   const publishersConfigMap = useStore((state) => state.publishersConfigMap);
@@ -171,11 +173,20 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
                 <Text fontSize="xs">Product status:</Text>
                 <Text fontSize="xs">Product account:</Text>
                 <Text fontSize="xs">Price account:</Text>
+                <Text fontSize="xs">Product summary:</Text>
               </Space>
               <Space direction="vertical" size={2}>
                 <Text fontSize="xs">{StatusTexts[record.productStatus]}</Text>
                 <Text fontSize="xs">{record.productAccount}</Text>
                 <Text fontSize="xs">{record.priceAccount}</Text>
+                <Link
+                  href={PYTH_LINK.productPage(record.symbol.replace(/[\\.\\/]/g, "-").toLowerCase(), cluster)}
+                  target="_blank"
+                >
+                  <Text fontSize="xs" underline>
+                    View on Pyth
+                  </Text>
+                </Link>
               </Space>
             </Space>
           }
@@ -215,9 +226,22 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
             <Space size={4}>
               <Space direction="vertical" size={2}>
                 <Text fontSize="xs">Publisher account:</Text>
+                <Text fontSize="xs">Publisher metrics:</Text>
               </Space>
               <Space direction="vertical" size={2}>
                 <Text fontSize="xs">{record.publisherAccount}</Text>
+                <Link
+                  href={PYTH_LINK.publisherPage(
+                    record.symbol.replace(/[\\.\\/]/g, "-").toLowerCase(),
+                    cluster,
+                    record.publisherAccount,
+                  )}
+                  target="_blank"
+                >
+                  <Text fontSize="xs" underline>
+                    View on Pyth
+                  </Text>
+                </Link>
               </Space>
             </Space>
           }
@@ -276,8 +300,13 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
             </Text>
           </Space>
           <Space direction="vertical" size={2}>
-            <DynamicNumber fontSize="sm" prefix="$" num={record.price} />
-            <DynamicNumber fontSize="xs" color="var(--colors-gray-500)" prefix="$" num={record.productPrice} />
+            <DynamicNumber fontSize="sm" prefix={getQuoteSymbol(record.quoteCurrency)} num={record.price} />
+            <DynamicNumber
+              fontSize="xs"
+              color="var(--colors-gray-500)"
+              prefix={getQuoteSymbol(record.quoteCurrency)}
+              num={record.productPrice}
+            />
           </Space>
         </Space>
       ),
@@ -296,8 +325,13 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
             </Text>
           </Space>
           <Space direction="vertical" size={2}>
-            <DynamicNumber fontSize="sm" prefix="$±" num={record.confidence} />
-            <DynamicNumber fontSize="xs" color="var(--colors-gray-500)" prefix="$±" num={record.productConfidence} />
+            <DynamicNumber fontSize="sm" prefix={`${getQuoteSymbol(record.quoteCurrency)}±`} num={record.confidence} />
+            <DynamicNumber
+              fontSize="xs"
+              color="var(--colors-gray-500)"
+              prefix={`${getQuoteSymbol(record.quoteCurrency)}±`}
+              num={record.productConfidence}
+            />
           </Space>
         </Space>
       ),

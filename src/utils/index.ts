@@ -7,7 +7,7 @@ import BigNumber from "bignumber.js";
 import { Buffer } from "buffer";
 import _ from "lodash";
 
-import { PriceInfo, ProductInfo, ProductPriceInfo } from "@/type";
+import { PriceInfo, ProductInfo, ProductPriceInfo, PublisherKey } from "@/type";
 
 export const usePrevious = <T>(state: T): T | undefined => {
   const ref = useRef<T>();
@@ -38,6 +38,25 @@ export const isPublicKey = (publicKey: PublicKeyish) => {
 
 export const shortAddress = (address: string) => {
   return address.slice(0, 5) + "..." + address.slice(-5);
+};
+
+export const getQuoteSymbol = (quoteCurrency: string) => {
+  switch (quoteCurrency) {
+    case "USD":
+      return "$";
+    case "BTC":
+      return "₿";
+
+    default:
+      return "";
+  }
+};
+
+export const PYTH_LINK = {
+  productPage: (hyphenatedSymbol: string, cluster: PythCluster) =>
+    `https://pyth.network/price-feeds/${hyphenatedSymbol}?cluster=${cluster}`,
+  publisherPage: (hyphenatedSymbol: string, cluster: PythCluster, publisherKey: PublisherKey) =>
+    `https://pyth.network/metrics?price-feed=${hyphenatedSymbol}&cluster=${cluster}&publisher=${publisherKey}`,
 };
 
 export const findProgramAddress = (seeds: Array<Buffer | Uint8Array>, programId: PublicKey) => {
