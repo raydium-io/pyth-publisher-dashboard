@@ -7,7 +7,7 @@ import BigNumber from "bignumber.js";
 import { Buffer } from "buffer";
 import _ from "lodash";
 
-import { PriceInfo, ProductInfo, ProductKey, ProductPriceInfo, PublisherKey } from "@/type";
+import { ProductInfo, ProductKey, ProductPriceInfo, PublisherKey, PublisherPriceInfo } from "@/type";
 
 import { logger } from "./logger";
 
@@ -42,6 +42,10 @@ export const sleep = async (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
+export const getTimestamp = () => {
+  return parseInt(String(new Date().getTime() / 1000));
+};
+
 export const calcInterval = (cronMinutes = 10) => {
   const seconds = 60 * cronMinutes;
 
@@ -55,7 +59,7 @@ export const endlessRetry = async <T>(
   call: () => Promise<T>,
   config?: { sleepSeconds: number; maxRetry: number },
 ): Promise<T> => {
-  const { sleepSeconds = 5, maxRetry = 3 } = config || {};
+  const { sleepSeconds = 10, maxRetry = 3 } = config || {};
 
   let count = 0;
 
@@ -206,13 +210,13 @@ export const formatBigNumber = (price: bigint, exponent: number) => {
 /*
  * format publisher price info
  */
-export const formatPythPrice = (price: Price, exponent: number, publisherAccount: string): PriceInfo => {
+export const formatPythPrice = (price: Price, exponent: number, publisherAccount: string): PublisherPriceInfo => {
   const { priceComponent, confidenceComponent, status, publishSlot } = price;
 
   return {
-    price: formatBigNumber(priceComponent, exponent),
-    confidence: formatBigNumber(confidenceComponent, exponent),
-    status,
+    publishPrice: formatBigNumber(priceComponent, exponent),
+    publishConfidence: formatBigNumber(confidenceComponent, exponent),
+    publishStatus: status,
     publishSlot,
     publisherAccount,
   };

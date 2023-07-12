@@ -14,7 +14,7 @@ import {
 } from "@/type";
 import {
   formatPythPrice, formatPythPriceData, formatPythProduct, getMultipleAccountsInfoWithCustomFlags,
-  getProductAndPublisherKey, getPythProductAccountPubkeys, isPublicKey,
+  getProductAndPublisherKey, getPythProductAccountPubkeys, getTimestamp, isPublicKey,
 } from "@/utils";
 import WorkFlow from "@/utils/flow";
 import { logger } from "@/utils/logger";
@@ -350,7 +350,8 @@ export const useStore = create<State>()(
               ...productPriceInfo,
             };
 
-            if (oldValue.publishSlot === newValue.publishSlot) return;
+            // TODO if no data trigger, table will not render
+            if (oldValue.publishSlot === newValue.publishSlot) newValue.timestamp = oldValue.timestamp;
 
             // handle slot override if subscribed to multiple sources
             // if (publishPriceInfo.publishSlot > newValue.publishSlot) newValue = { ...newValue, ...publishPriceInfo };
@@ -439,10 +440,20 @@ export const useStore = create<State>()(
                 if (!_.keys(getPublishersConfigMap()).includes(publisherKey)) return;
 
                 publishingProductKeys.push(productKey);
+
+                const productBaseInfo = _.get(productsMap, productKey);
+                const publishPriceInfo = formatPythPrice(latest, exponent, publisherKey);
+                const productPriceInfo = formatPythPriceData(priceData);
+
+                // handle delayed publish slot
+                // 500ms per slot
+                const slotPassed = productPriceInfo.validSlot - publishPriceInfo.publishSlot;
+                productPriceInfo.timestamp = productPriceInfo.timestamp - slotPassed * 0.5;
+
                 _.set(publishDetailsMap, getProductAndPublisherKey(productKey, publisherKey), {
-                  ..._.get(productsMap, productKey),
-                  ...formatPythPrice(latest, exponent, publisherKey),
-                  ...formatPythPriceData(priceData),
+                  ...productBaseInfo,
+                  ...publishPriceInfo,
+                  ...productPriceInfo,
                 });
               });
             }

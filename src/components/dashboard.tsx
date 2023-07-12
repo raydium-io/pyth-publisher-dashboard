@@ -15,7 +15,8 @@ import { StatusTexts } from "@/constant";
 import { useStore } from "@/store";
 import { ClusterStatus, PublishDetail, UptimeInfo } from "@/type";
 import {
-  calcInterval, endlessRetry, getProductAndPublisherKey, getQuoteSymbol, PYTH_LINK, shortAddress, useInterval,
+  calcInterval, endlessRetry, getProductAndPublisherKey, getQuoteSymbol, getTimestamp, PYTH_LINK, shortAddress,
+  useInterval,
 } from "@/utils";
 import { fetchUptime } from "@/utils/api";
 import { logger } from "@/utils/logger";
@@ -24,10 +25,21 @@ dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
 dayjs.updateLocale("en", {
   // https://day.js.org/docs/en/display/from-now
+  // https://day.js.org/docs/en/customization/relative-time
+  // https://github.com/iamkun/dayjs/blob/master/src/locale/en-sg.js
   relativeTime: {
     ...dayjs.Ls.en.relativeTime,
     s: "%ds",
-    ss: "%ds",
+    m: ">1m",
+    mm: ">1m",
+    h: ">1m",
+    hh: ">1m",
+    d: ">1m",
+    dd: ">1m",
+    M: ">1m",
+    MM: ">1m",
+    y: ">1m",
+    yy: ">1m",
   },
 });
 
@@ -234,7 +246,12 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
       ),
       shouldCellUpdate: (record, prevRecord) => false,
       defaultSortOrder: "ascend",
-      sorter: (a, b) => a.genericSymbol.localeCompare(b.genericSymbol),
+      sorter: (a, b) => {
+        if (a.genericSymbol && b.genericSymbol) return a.genericSymbol.localeCompare(b.genericSymbol);
+
+        // Entity asset no generic symbol
+        return a.symbol.localeCompare(b.symbol);
+      },
       // !tricky if selected publishers, onFilter will not be called
       filteredValue: getSelectedAssetTypes().length ? getSelectedAssetTypes() : ["null"],
       onFilter: (value: string | number | boolean, record) => {
@@ -290,8 +307,18 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
       title: "Last Updated",
       key: "updated",
       width: 200,
-      render: ($, record) => <Text fontSize="sm">{dayjs(record.timestamp * 1000).fromNow()}</Text>,
-      // shouldCellUpdate: (record, prevRecord) => record.publishSlot !== prevRecord.publishSlot,
+      render: ($, record) => {
+        if (record.publishPrice === "0") return <Text fontSize="sm">-</Text>;
+
+        return (
+          <Text fontSize="sm">
+            {dayjs(record.timestamp * 1000).fromNow()}
+            {record.timestamp + 60 < getTimestamp() && (
+              <ExclamationCircleOutlined style={{ marginLeft: "var(--space-1)", color: "var(--colors-orange-300)" }} />
+            )}
+          </Text>
+        );
+      },
     },
     {
       title: "Slot",
@@ -327,7 +354,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
             </Text>
           </Space>
           <Space direction="vertical" size={2}>
-            <DynamicNumber fontSize="sm" prefix={getQuoteSymbol(record.quoteCurrency)} num={record.price} />
+            <DynamicNumber fontSize="sm" prefix={getQuoteSymbol(record.quoteCurrency)} num={record.publishPrice} />
             <DynamicNumber
               fontSize="xs"
               color="var(--colors-gray-500)"
@@ -338,7 +365,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
         </Space>
       ),
       shouldCellUpdate: (record, prevRecord) =>
-        record.price !== prevRecord.price || record.productPrice !== prevRecord.productPrice,
+        record.publishPrice !== prevRecord.publishPrice || record.productPrice !== prevRecord.productPrice,
     },
     {
       title: "Confidence",
@@ -352,7 +379,11 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
             </Text>
           </Space>
           <Space direction="vertical" size={2}>
-            <DynamicNumber fontSize="sm" prefix={`${getQuoteSymbol(record.quoteCurrency)}±`} num={record.confidence} />
+            <DynamicNumber
+              fontSize="sm"
+              prefix={`${getQuoteSymbol(record.quoteCurrency)}±`}
+              num={record.publishConfidence}
+            />
             <DynamicNumber
               fontSize="xs"
               color="var(--colors-gray-500)"
@@ -363,7 +394,8 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
         </Space>
       ),
       shouldCellUpdate: (record, prevRecord) =>
-        record.confidence !== prevRecord.confidence || record.productConfidence !== prevRecord.productConfidence,
+        record.publishConfidence !== prevRecord.publishConfidence ||
+        record.productConfidence !== prevRecord.productConfidence,
     },
     {
       title: "Uptime",
@@ -383,7 +415,8 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
       pagination={false}
       showSorterTooltip={false}
       rowClassName={(record) => {
-        if (record.price === "0") return "bg-error";
+        if (record.productStatus !== 1 || record.publishPrice === "0") return "bg-error";
+        if (record.timestamp + 60 < getTimestamp()) return "bg-warning";
         return "";
       }}
       scroll={{ x: 1500 }}

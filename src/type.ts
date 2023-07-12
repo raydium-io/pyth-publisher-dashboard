@@ -62,11 +62,11 @@ export interface ProductInfo {
   productAccount: string;
 }
 
-export interface PriceInfo {
-  // publish price info
-  price: string;
-  confidence: string;
-  status: PriceStatus;
+export interface PublisherPriceInfo {
+  // publisher price info
+  publishPrice: string;
+  publishConfidence: string;
+  publishStatus: PriceStatus;
   publishSlot: number;
   publisherAccount: string;
 }
@@ -80,7 +80,7 @@ export interface ProductPriceInfo {
   timestamp: number;
 }
 
-export type PublishDetail = ProductInfo & PriceInfo & ProductPriceInfo;
+export type PublishDetail = ProductInfo & PublisherPriceInfo & ProductPriceInfo;
 
 export interface UptimeInfo {
   timestamp: string;
