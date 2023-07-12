@@ -14,7 +14,7 @@ import { Center, DynamicNumber, Text, Tooltip } from "@/components/ui";
 import { StatusTexts } from "@/constant";
 import { useStore } from "@/store";
 import { ClusterStatus, PublishDetail, UptimeInfo } from "@/type";
-import { getQuoteSymbol, PYTH_LINK, shortAddress } from "@/utils";
+import { getProductAndPublisherKey, getQuoteSymbol, PYTH_LINK, shortAddress } from "@/utils";
 import { fetchUptime } from "@/utils/api";
 
 dayjs.extend(relativeTime);
@@ -108,15 +108,13 @@ const CustomTooltip = ({ active, payload, label }: ReTooltipProps<ValueType, Nam
 
 export const PublisherUptime = ({ cluster, publishDetail }: { cluster: PythCluster; publishDetail: PublishDetail }) => {
   const uptimeMap = useStore((state) => state.uptimeMap);
-  const getUptime = useCallback(
-    () =>
-      _.get(
-        uptimeMap,
-        `${cluster}.${publishDetail.productAccount}_${publishDetail.publisherAccount}`,
-        [],
-      ) as UptimeInfo[],
-    [cluster, uptimeMap],
-  );
+  const getUptime = useCallback(() => {
+    return _.get(
+      uptimeMap,
+      `${cluster}.${getProductAndPublisherKey(publishDetail.productAccount, publishDetail.publisherAccount)}`,
+      [],
+    ) as UptimeInfo[];
+  }, [cluster, uptimeMap]);
   const setUptime = useStore((state) => state.setUptime);
 
   useEffect(() => {
@@ -129,7 +127,8 @@ export const PublisherUptime = ({ cluster, publishDetail }: { cluster: PythClust
       cluster: cluster,
       publisher: publishDetail.publisherAccount,
     });
-    setUptime(cluster, `${publishDetail.productAccount}_${publishDetail.publisherAccount}`, uptime);
+
+    setUptime(cluster, getProductAndPublisherKey(publishDetail.productAccount, publishDetail.publisherAccount), uptime);
   };
 
   if (!getUptime().length)
@@ -272,7 +271,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
       key: "updated",
       width: 200,
       render: ($, record) => <Text fontSize="sm">{dayjs(record.timestamp * 1000).fromNow()}</Text>,
-      // shouldCellUpdate: (record, prevRecord) => record.timestamp !== prevRecord.timestamp,
+      // shouldCellUpdate: (record, prevRecord) => record.publishSlot !== prevRecord.publishSlot,
     },
     {
       title: "Slot",
@@ -359,7 +358,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
     <Table
       columns={columns}
       dataSource={_.values(getPublishDetails())}
-      rowKey={(record) => `${record.productAccount}_${record.publisherAccount}`}
+      rowKey={(record) => getProductAndPublisherKey(record.productAccount, record.publisherAccount)}
       bordered
       pagination={false}
       showSorterTooltip={false}

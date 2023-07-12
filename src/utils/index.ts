@@ -7,7 +7,7 @@ import BigNumber from "bignumber.js";
 import { Buffer } from "buffer";
 import _ from "lodash";
 
-import { PriceInfo, ProductInfo, ProductPriceInfo, PublisherKey } from "@/type";
+import { PriceInfo, ProductInfo, ProductKey, ProductPriceInfo, PublisherKey } from "@/type";
 
 export const usePrevious = <T>(state: T): T | undefined => {
   const ref = useRef<T>();
@@ -35,6 +35,9 @@ export const isPublicKey = (publicKey: PublicKeyish) => {
 
   return false;
 };
+
+export const getProductAndPublisherKey = (productKey: ProductKey, publisherKey: PublisherKey) =>
+  `${productKey}_${publisherKey}`;
 
 export const shortAddress = (address: string) => {
   return address.slice(0, 5) + "..." + address.slice(-5);

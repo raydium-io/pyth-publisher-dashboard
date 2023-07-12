@@ -1,7 +1,7 @@
 import {
   getPythProgramKeyForCluster, parsePriceData, parseProductData, PriceData, Product, PythCluster, PythConnection,
 } from "@pythnetwork/client";
-import { AccountInfo, Connection, PublicKey } from "@solana/web3.js";
+import { AccountInfo, Connection, Context, KeyedAccountInfo, PublicKey } from "@solana/web3.js";
 import { diff } from "deep-object-diff";
 import _ from "lodash";
 import { create } from "zustand";
@@ -14,7 +14,7 @@ import {
 } from "@/type";
 import {
   formatPythPrice, formatPythPriceData, formatPythProduct, getMultipleAccountsInfoWithCustomFlags,
-  getPythProductAccountPubkeys, isPublicKey,
+  getProductAndPublisherKey, getPythProductAccountPubkeys, isPublicKey,
 } from "@/utils";
 import WorkFlow from "@/utils/flow";
 
@@ -46,6 +46,10 @@ type State = {
   productsMap: ClusterRecord<Record<ProductKey, ProductInfo>>;
   setProductsMap: (cluster: PythCluster, productsMap: Record<ProductKey, ProductInfo>) => void;
   setProduct: (cluster: PythCluster, productKey: ProductKey, productInfo: ProductInfo) => void;
+
+  // only store permitted products keys for index
+  publishingProductKeys: ClusterRecord<ProductKey[]>;
+  setPublishingProductKeys: (cluster: PythCluster, keys: ProductKey[]) => void;
 
   publishDetailsMap: ClusterRecord<Record<ProductAndPublisherKey, PublishDetail>>;
   setPublishDetailsMap: (
@@ -237,6 +241,16 @@ export const useStore = create<State>()(
           "setProduct",
         ),
 
+      publishingProductKeys: {},
+      setPublishingProductKeys: (cluster, keys) =>
+        set(
+          (state) => {
+            state.publishingProductKeys = _.set(state.publishingProductKeys, cluster, keys);
+          },
+          false,
+          "setPublishingProductKeys",
+        ),
+
       publishDetailsMap: {},
       setPublishDetailsMap: (cluster, publishDetailsMap) =>
         set(
@@ -289,6 +303,9 @@ export const useStore = create<State>()(
         const setProduct = (productKey: ProductKey, productInfo: ProductInfo) =>
           get().setProduct(cluster, productKey, productInfo);
 
+        const getPublishingProductKeys = () => _.get(get().publishingProductKeys, cluster, []) as ProductKey[];
+        const setPublishingProductKeys = (keys: ProductKey[]) => get().setPublishingProductKeys(cluster, keys);
+
         const getPublishDetailsMap = () => _.get(get().publishDetailsMap, cluster);
         const setPublishDetailsMap = (publishDetailsMap: Record<ProductAndPublisherKey, PublishDetail>) =>
           get().setPublishDetailsMap(cluster, publishDetailsMap);
@@ -296,40 +313,68 @@ export const useStore = create<State>()(
           get().setPublishDetail(cluster, key, publishDetail);
 
         // callback
-        const onPythPrice = (product: Product, priceData: PriceData) => {
+        const handlePrice = (priceData: PriceData, { source, context }: { source?: string; context?: Context }) => {
           const { priceComponents, productAccountKey, exponent } = priceData;
 
           const productKey = productAccountKey.toBase58();
+
+          if (!getPublishingProductKeys().includes(productKey)) return;
+
+          const publisherKeys = _.keys(getPublishersConfigMap());
 
           priceComponents.forEach(({ publisher, latest, aggregate }) => {
             const publisherKey = publisher.toBase58();
 
             // TODO remove?
-            if (!_.keys(getPublishersConfigMap()).includes(publisherKey)) return;
+            if (!publisherKeys.includes(publisherKey)) return;
 
-            let oldValue = _.get(getPublishDetailsMap(), `${productKey}_${publisherKey}`);
+            const productAndPublisherKey = getProductAndPublisherKey(productKey, publisherKey);
+            let oldValue = _.get(getPublishDetailsMap(), productAndPublisherKey);
+
+            const productBaseInfo = _.get(productsMap, productKey);
+            const publishPriceInfo = formatPythPrice(latest, exponent, publisherKey);
+            const productPriceInfo = formatPythPriceData(priceData);
 
             if (!oldValue)
               oldValue = {
-                ..._.get(productsMap, productKey),
-                ...formatPythPrice(latest, exponent, publisherKey),
-                ...formatPythPriceData(priceData),
+                ...productBaseInfo,
+                ...publishPriceInfo,
+                ...productPriceInfo,
               };
 
             let newValue = _.cloneDeep(oldValue);
             newValue = {
-              ...oldValue,
-              ...formatPythPrice(latest, exponent, publisherKey),
-              ...formatPythPriceData(priceData),
+              ...newValue,
+              ...publishPriceInfo,
+              ...productPriceInfo,
             };
+
+            if (oldValue.publishSlot === newValue.publishSlot) return;
+
+            // handle slot override if subscribed to multiple sources
+            // if (publishPriceInfo.publishSlot > newValue.publishSlot) newValue = { ...newValue, ...publishPriceInfo };
 
             const result = diff(oldValue, newValue);
             if (!_.isEmpty(result)) {
-              setPublishDetail(`${productKey}_${publisherKey}`, newValue);
+              setPublishDetail(productAndPublisherKey, newValue);
 
-              // console.log("onPythPrice diff:", result);
+              // if (newValue.base === "RAY") console.log(`${source} diff:`, result, context);
             }
           });
+        };
+
+        const onPythPrice = (product: Product, priceData: PriceData) => {
+          handlePrice(priceData, { source: "onPythPrice" });
+        };
+        const onProgramAccountChange = ({ accountId, accountInfo }: KeyedAccountInfo, context: Context) => {
+          const priceData = parsePriceData(accountInfo.data);
+
+          handlePrice(priceData, { source: "onProgramAccountChange", context });
+        };
+        const onAccountChange = (accountInfo: AccountInfo<Buffer>, context: Context) => {
+          const priceData = parsePriceData(accountInfo.data);
+
+          handlePrice(priceData, { source: "onAccountChange", context });
         };
 
         const flow = WorkFlow.create();
@@ -337,6 +382,7 @@ export const useStore = create<State>()(
 
         // index for product base info
         const productsMap: Record<ProductKey, ProductInfo> = {};
+        const publishingProductKeys: ProductKey[] = [];
         const publishDetailsMap: Record<ProductAndPublisherKey, PublishDetail> = {};
 
         flow.add(() => {
@@ -391,16 +437,19 @@ export const useStore = create<State>()(
                 // TODO remove?
                 if (!_.keys(getPublishersConfigMap()).includes(publisherKey)) return;
 
-                publishDetailsMap[`${productKey}_${publisherKey}`] = {
+                publishingProductKeys.push(productKey);
+                _.set(publishDetailsMap, getProductAndPublisherKey(productKey, publisherKey), {
                   ..._.get(productsMap, productKey),
                   ...formatPythPrice(latest, exponent, publisherKey),
                   ...formatPythPriceData(priceData),
-                };
+                });
               });
             }
           }, "Fetch price accounts data");
 
+          // set data
           setProductsMap(productsMap);
+          setPublishingProductKeys(_.uniq(publishingProductKeys));
           setPublishDetailsMap(publishDetailsMap);
 
           _.keys(getPublishersConfigMap()).forEach((publisherKey) => {
@@ -424,10 +473,23 @@ export const useStore = create<State>()(
         }, "Starting Pyth");
 
         flow.add(() => {
-          setInitializationDescription("Subscribe Pyth price...");
+          setInitializationDescription("Subscribe Pyth onPriceChange...");
 
-          pythConn.onPriceChange(onPythPrice);
-        }, "Subscribe Pyth price");
+          // pythConn.onPriceChange(onPythPrice);
+
+          // product account 512 bytes
+          // price account  3312 bytes
+          //   pythConn.connection.onProgramAccountChange(
+          //     getPythProgramKeyForCluster(cluster),
+          //     onProgramAccountChange,
+          //     "confirmed",
+          //     [{ dataSize: 3312 }],
+          //   );
+
+          _.values(publishDetailsMap).forEach(({ priceAccount }) => {
+            pythConn.connection.onAccountChange(new PublicKey(priceAccount), onAccountChange, "confirmed");
+          });
+        }, "Subscribe Pyth onPriceChange");
 
         await flow.execute({
           // next: (result, index) => console.log("task:", index, result),
