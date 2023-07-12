@@ -1,0 +1,89 @@
+/* https://chakra-ui.com/docs/styled-system/theme */
+:root {
+  --colors-gray-200: #e2e8f0;
+  --colors-gray-500: #718096;
+
+  --colors-green-50: #f0fff4;
+  --colors-green-200: #9ae6b4;
+  --colors-green-300: #68d391;
+
+  --colors-red-50: #fff5f5;
+  --colors-red-100: #fed7d7;
+  --colors-red-200: #feb2b2;
+  --colors-red-300: #fc8181;
+  --colors-red-400: #f56565;
+
+  --colors-orange-50: #fffaf0;
+  --colors-orange-100: #feebc8;
+  --colors-orange-300: #f6ad55;
+
+  --fontSizes-xs: 0.75rem;
+  --fontSizes-sm: 0.875rem;
+  --fontSizes-md: 1rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-16: 4rem;
+}
+
+.ant-tabs-content-holder {
+  display: flex;
+  padding: 0 var(--space-4);
+}
+
+.ant-tabs-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.ant-tabs-tabpane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* for table sorter */
+.ant-table-wrapper .ant-table-column-sorters {
+  justify-content: flex-start;
+}
+.ant-table-wrapper .ant-table-column-title {
+  flex: unset;
+}
+
+.bg-warning {
+  background-color: var(--colors-orange-50);
+}
+.bg-error {
+  background-color: var(--colors-red-50);
+}
+.ant-table-wrapper .ant-table-tbody > tr.bg-warning:hover > td:not(.ant-table-column-sort) {
+  background-color: var(--colors-orange-100);
+}
+.ant-table-wrapper .ant-table-tbody > tr.bg-error:hover > td:not(.ant-table-column-sort) {
+  background-color: var(--colors-red-100);
+}
+
+@keyframes green-to-transparent {
+  0% {
+    background: rgb(119, 236, 149, 1);
+  }
+  50% {
+    background: rgb(119, 236, 149, 0.5);
+  }
+  100% {
+    background: rgb(119, 236, 149, 0);
+  }
+}
+@keyframes red-to-transparent {
+  0% {
+    background: rgb(255, 199, 197, 1);
+  }
+  50% {
+    background: rgb(255, 199, 197, 0.5);
+  }
+  100% {
+    background: rgb(255, 199, 197, 0);
+  }
+}
