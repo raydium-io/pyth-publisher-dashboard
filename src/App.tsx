@@ -21,6 +21,7 @@ const App = () => {
     return (
       <Center>
         <Result
+          style={{ marginBottom: "var(--space-16)" }}
           status="warning"
           title="There are no clusters being set"
           subTitle="Please follow the instructions in the README to set up the clusters and publishers you want to monitoring"

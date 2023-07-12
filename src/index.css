@@ -52,6 +52,11 @@
   flex: unset;
 }
 
+/* for uptime column */
+tr.ant-table-row td.ant-table-cell:last-child {
+  padding: 0;
+}
+
 .bg-warning {
   background-color: var(--colors-orange-50);
 }

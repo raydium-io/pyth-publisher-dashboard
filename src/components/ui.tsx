@@ -12,7 +12,6 @@ export const Center = styled.div`
   flex-direction: column;
   justify-content: center;
   flex: 1;
-  margin-bottom: var(--space-16);
 `;
 
 interface StatusDotProps {
@@ -66,6 +65,7 @@ interface TextProps {
 export const Text = styled(AntText)<TextProps>`
   ${({ fontSize }) => fontSize && `font-size: var(--fontSizes-${fontSize});`}
   ${({ color }) => color && `color: ${color};`}
+  white-space: nowrap;
 `;
 
 const defaultStyles = { backgroundColor: "transparent", animation: "" };

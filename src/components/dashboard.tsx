@@ -40,8 +40,8 @@ export const DashboardCheckbox = ({ cluster }: { cluster: PythCluster }) => {
   const setAssetSelected = useStore((state) => state.setAssetSelected);
 
   return (
-    <Row>
-      <Col span={12}>
+    <Row gutter={[16, 16]}>
+      <Col xs={24} sm={24} md={24} lg={12} xl={12}>
         <Space direction="vertical">
           <Text>Publishers:</Text>
           {_.entries(getPublishers()).map(([publisher, { selected, permittedCount }]) => (
@@ -55,7 +55,7 @@ export const DashboardCheckbox = ({ cluster }: { cluster: PythCluster }) => {
           ))}
         </Space>
       </Col>
-      <Col span={12}>
+      <Col xs={24} sm={24} md={24} lg={12} xl={12}>
         <Space direction="vertical">
           <Text>Asset Types:</Text>
           <Space>
@@ -132,12 +132,17 @@ export const PublisherUptime = ({ cluster, publishDetail }: { cluster: PythClust
     setUptime(cluster, `${publishDetail.productAccount}_${publishDetail.publisherAccount}`, uptime);
   };
 
-  if (!getUptime().length) return <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} spin />} />;
+  if (!getUptime().length)
+    return (
+      <Center>
+        <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} spin />} />
+      </Center>
+    );
 
   return (
-    <BarChart width={150} height={40} data={getUptime()}>
+    <BarChart width={200} height={65} data={getUptime()}>
       <XAxis dataKey="timestamp" hide />
-      <ReTooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 99 }} position={{ y: 40 }} />
+      <ReTooltip content={<CustomTooltip />} wrapperStyle={{ zIndex: 99 }} position={{ y: -50 }} />
       <Bar name="Hit Rate" dataKey="slotHitRate" shape={ColourfulBar} />
     </BarChart>
   );
@@ -165,6 +170,8 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
     {
       title: "Product",
       key: "product",
+      fixed: "left",
+      width: 160,
       render: ($, record) => (
         <Tooltip
           title={
@@ -219,7 +226,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
     {
       title: "Publisher",
       key: "publisher",
-      dataIndex: "publisherAccount",
+      width: 150,
       render: ($, record) => (
         <Tooltip
           title={
@@ -263,6 +270,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
     {
       title: "Last Updated",
       key: "updated",
+      width: 200,
       render: ($, record) => <Text fontSize="sm">{dayjs(record.timestamp * 1000).fromNow()}</Text>,
       // shouldCellUpdate: (record, prevRecord) => record.timestamp !== prevRecord.timestamp,
     },
@@ -341,6 +349,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
     {
       title: "Uptime",
       key: "uptime",
+      width: 200,
       render: ($, record) => <PublisherUptime cluster={cluster} publishDetail={record} />,
       shouldCellUpdate: (record, prevRecord) => false,
     },
@@ -358,6 +367,7 @@ export const DashboardTable = ({ cluster }: { cluster: PythCluster }) => {
         if (record.price === "0") return "bg-error";
         return "";
       }}
+      scroll={{ x: 1500 }}
     />
   );
 };
@@ -380,6 +390,7 @@ export const Dashboard = ({ cluster }: { cluster: PythCluster }) => {
     return (
       <Center>
         <Result
+          style={{ marginBottom: "var(--space-16)" }}
           icon={
             getStatus().failed ? (
               <CloseCircleFilled style={{ color: "var(--colors-red-400)" }} />
