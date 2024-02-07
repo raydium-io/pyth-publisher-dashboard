@@ -7,9 +7,9 @@ import BigNumber from "bignumber.js";
 import { Buffer } from "buffer";
 import _ from "lodash";
 
-import { ProductInfo, ProductKey, ProductPriceInfo, PublisherKey, PublisherPriceInfo } from "@/type";
-
 import { logger } from "./logger";
+
+import { ProductInfo, ProductKey, ProductPriceInfo, PublisherKey, PublisherPriceInfo } from "@/type";
 
 export const usePrevious = <T>(state: T): T | undefined => {
   const ref = useRef<T>();
@@ -112,6 +112,10 @@ export const getQuoteSymbol = (quoteCurrency: string) => {
       return "$";
     case "BTC":
       return "₿";
+    case "ETH":
+      return "Ξ";
+    case "SOL":
+      return "◎";
 
     default:
       return "";
@@ -119,10 +123,16 @@ export const getQuoteSymbol = (quoteCurrency: string) => {
 };
 
 export const PYTH_LINK = {
-  productPage: (hyphenatedSymbol: string, cluster: PythCluster) =>
-    `https://pyth.network/price-feeds/${hyphenatedSymbol}?cluster=${cluster}`,
-  publisherPage: (hyphenatedSymbol: string, cluster: PythCluster, publisherKey: PublisherKey) =>
-    `https://pyth.network/metrics?price-feed=${hyphenatedSymbol}&cluster=${cluster}&publisher=${publisherKey}`,
+  productPage: (hyphenatedSymbol: string, cluster: PythCluster) => {
+    const clusterName = cluster.startsWith("pyth") ? cluster : `solana-${cluster}`;
+
+    return `https://pyth.network/price-feeds/${hyphenatedSymbol}?cluster=${clusterName}`;
+  },
+  publisherPage: (hyphenatedSymbol: string, cluster: PythCluster, publisherKey: PublisherKey) => {
+    const clusterName = cluster.startsWith("pyth") ? cluster : `solana-${cluster}`;
+
+    return `https://pyth.network/metrics?price-feed=${hyphenatedSymbol}&cluster=${clusterName}&publisher=${publisherKey}`;
+  },
 };
 
 export const findProgramAddress = (seeds: Array<Buffer | Uint8Array>, programId: PublicKey) => {

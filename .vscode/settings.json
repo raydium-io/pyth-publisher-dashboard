@@ -1,0 +1,27 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.codeActionsOnSave": ["source.formatDocument", "source.organizeImports.sortImports"],
+  // https://marketplace.visualstudio.com/items?itemName=fabiospampinato.vscode-highlight
+  "highlight.regexes": {},
+  // https://marketplace.visualstudio.com/items?itemName=dozerg.tsimportsorter
+  "tsImportSorter.configuration.groupRules": [
+    // https://github.com/daidodo/format-imports/wiki/Grouping-Rules#types-of-imports
+    { "flags": "scripts" },
+    {
+      "flags": "named",
+      "subGroups": ["^react$", "^react-", "^vite$", "^@vitejs/", "^@\\w", "^\\w"]
+    },
+    ["^~/"],
+    ["^\\.\\."],
+    ["^\\."]
+  ],
+  "tsImportSorter.configuration.keepUnused": [".*"],
+  "tsImportSorter.configuration.wrappingStyle": {
+    // https://github.com/daidodo/format-imports/wiki/Line-Wrapping-Style
+    "maxNamesPerWrappedLine": 0,
+    "maxBindingNamesPerLine": 0,
+    "maxDefaultAndBindingNamesPerLine": 0
+  }
+}
